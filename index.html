@@ -1,1 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naveed Computers Store | The Black Label Collection</title>
+    
+    <!-- Google Fonts: Inter for UI, Playfair Display for Elegance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    
+    <!-- Icons & Styling -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        premium: {
+                            gold: '#C5A059',
+                            silver: '#E5E7EB',
+                            obsidian: '#0A0A0B',
+                            charcoal: '#1A1A1C',
+                            accent: '#3B82F6'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        body {
+            background-color: #0A0A0B;
+            color: #FFFFFF;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* 3D Card Effect */
+        .card-container {
+            perspective: 1000px;
+        }
+
+        .premium-card {
+            transition: transform 0.6s var(--ease-out-expo), box-shadow 0.6s var(--ease-out-expo);
+            transform-style: preserve-3d;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        .premium-card:hover {
+            transform: translateY(-10px) rotateX(2deg) rotateY(2deg);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(197, 160, 89, 0.1);
+            border-color: rgba(197, 160, 89, 0.3);
+        }
+
+        /* Animated Underline */
+        .nav-link {
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: #C5A059;
+            transition: width 0.4s var(--ease-out-expo);
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        /* Reveal Animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1s var(--ease-out-expo);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Premium Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0A0A0B; }
+        ::-webkit-scrollbar-thumb { background: #C5A059; border-radius: 10px; }
+
+        .gold-gradient-text {
+            background: linear-gradient(to right, #C5A059, #F3E5AB, #C5A059);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mask-fade {
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+        }
+
+        /* Hero Text Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .float-anim { animation: float 6s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+
+    <canvas id="three-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 transition-all duration-500 py-6" id="navbar">
+        <div class="container mx-auto px-6 flex items-center justify-between">
+            <div class="flex items-center gap-2 group cursor-pointer">
+                <span class="font-serif text-3xl font-bold tracking-tighter text-white">N<span class="text-premium-gold italic">C</span></span>
+                <div class="h-8 w-px bg-white/20 mx-2"></div>
+                <div class="flex flex-col">
+                    <span class="text-xs tracking-[0.4em] text-zinc-500 uppercase font-bold">Naveed</span>
+                    <span class="text-[10px] tracking-[0.2em] text-premium-gold uppercase">Computers</span>
+                </div>
+            </div>
+
+            <div class="hidden md:flex items-center gap-10">
+                <a href="#" class="nav-link text-xs uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Bespoke Builds</a>
+                <a href="#" class="nav-link text-xs uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Inventory</a>
+                <a href="#" class="nav-link text-xs uppercase tracking-widest text-zinc-400 hover:text-white transition-colors">Our Craft</a>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <button class="text-zinc-400 hover:text-white transition-colors"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <div class="relative cursor-pointer" onclick="toggleCart()">
+                    <i class="fa-solid fa-cart-shopping text-premium-gold"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-3 text-[10px] bg-white text-black w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        <div class="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center relative z-10">
+            <div class="reveal">
+                <h4 class="text-premium-gold font-bold tracking-[0.3em] uppercase text-xs mb-4">Precision Engineering</h4>
+                <h1 class="font-serif text-6xl md:text-8xl leading-none mb-8">
+                    Elevating <br>
+                    <span class="italic text-premium-gold">Performance.</span>
+                </h1>
+                <p class="text-zinc-400 text-lg mb-10 max-w-md leading-relaxed">
+                    Custom-built computing masterpieces designed for those who demand absolute silence, peak thermals, and unrivaled power.
+                </p>
+                <div class="flex items-center gap-8">
+                    <button onclick="scrollToGrid()" class="px-10 py-4 bg-premium-gold text-black font-bold text-xs uppercase tracking-widest hover:bg-white transition-all duration-500">
+                        Explore Collection
+                    </button>
+                    <button class="text-xs uppercase tracking-widest border-b border-white/20 pb-1 hover:border-premium-gold transition-colors">
+                        Build My Own
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative reveal delay-300 hidden md:block">
+                <div class="absolute -inset-20 bg-premium-gold/5 blur-[120px] rounded-full"></div>
+                <img src="https://images.unsplash.com/photo-1624705578794-0f1e0023fcf6?q=80&w=1000&auto=format&fit=crop" 
+                     alt="Build" class="relative z-10 w-full float-anim mask-fade grayscale hover:grayscale-0 transition-all duration-1000 shadow-2xl">
+            </div>
+        </div>
+    </section>
+
+    <!-- Collection Grid -->
+    <section id="collection" class="py-32 bg-premium-obsidian/50 backdrop-blur-xl">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
+                <div>
+                    <span class="text-premium-gold font-bold tracking-[0.3em] uppercase text-xs">Curated Selection</span>
+                    <h2 class="font-serif text-5xl mt-2">Inventory.</h2>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="filterCategory('All')" class="category-btn active px-6 py-2 text-xs uppercase tracking-widest border border-white/10 hover:border-premium-gold transition-all">All</button>
+                    <button onclick="filterCategory('Gaming PCs')" class="category-btn px-6 py-2 text-xs uppercase tracking-widest border border-white/10 hover:border-premium-gold transition-all">Desktops</button>
+                    <button onclick="filterCategory('Components')" class="category-btn px-6 py-2 text-xs uppercase tracking-widest border border-white/10 hover:border-premium-gold transition-all">Hardware</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10" id="product-grid">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-20 border-t border-white/5">
+        <div class="container mx-auto px-6 flex flex-col items-center text-center">
+            <div class="flex items-center gap-2 mb-10">
+                <span class="font-serif text-4xl font-bold tracking-tighter text-white">N<span class="text-premium-gold italic">C</span></span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-12 w-full max-w-4xl mb-20">
+                <div>
+                    <h6 class="text-[10px] uppercase tracking-[0.2em] text-premium-gold font-bold mb-6">Concierge</h6>
+                    <ul class="text-zinc-500 text-xs space-y-4 uppercase tracking-widest">
+                        <li><a href="#" class="hover:text-white transition-colors">Shipping</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Warranty</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h6 class="text-[10px] uppercase tracking-[0.2em] text-premium-gold font-bold mb-6">Experience</h6>
+                    <ul class="text-zinc-500 text-xs space-y-4 uppercase tracking-widest">
+                        <li><a href="#" class="hover:text-white transition-colors">Showroom</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Reviews</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h6 class="text-[10px] uppercase tracking-[0.2em] text-premium-gold font-bold mb-6">Legal</h6>
+                    <ul class="text-zinc-500 text-xs space-y-4 uppercase tracking-widest">
+                        <li><a href="#" class="hover:text-white transition-colors">Privacy</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Terms</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h6 class="text-[10px] uppercase tracking-[0.2em] text-premium-gold font-bold mb-6">Connect</h6>
+                    <ul class="text-zinc-500 text-xs space-y-4 uppercase tracking-widest">
+                        <li><a href="#" class="hover:text-white transition-colors">Instagram</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+            <p class="text-[10px] uppercase tracking-[0.4em] text-zinc-600">© 2026 Naveed Computers Store — Handcrafted in Lahore</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div id="cart-sidebar" class="fixed inset-y-0 right-0 w-full max-w-md bg-premium-obsidian border-l border-white/10 z-[60] transform translate-x-full transition-transform duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] p-10 flex flex-col">
+        <div class="flex justify-between items-center mb-10">
+            <h3 class="font-serif text-3xl italic">The Trunk.</h3>
+            <button onclick="toggleCart()" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        <div id="cart-items" class="flex-grow overflow-y-auto space-y-8 pr-2"></div>
+        <div class="pt-10 border-t border-white/5">
+            <div class="flex justify-between items-end mb-8">
+                <span class="text-zinc-500 text-xs uppercase tracking-widest">Total Value</span>
+                <span id="cart-total" class="font-serif text-3xl text-premium-gold">Rs 0</span>
+            </div>
+            <button onclick="checkout()" class="w-full py-5 bg-premium-gold text-black font-bold text-xs uppercase tracking-widest hover:bg-white transition-all duration-500">
+                Secure Procurement
+            </button>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="overlay" onclick="toggleCart()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-500"></div>
+
+    <script>
+        // --- DATA ---
+        const products = [
+            { id: 1, name: "Obsidian Signature Rig", category: "Gaming PCs", price: 1250000, img: "https://images.unsplash.com/photo-1587202372634-32705e3bf49c?w=600&q=80", desc: "Dual RTX 4090. Hardline Chrome Loop. The absolute pinnacle of power." },
+            { id: 2, name: "Titanum Workstation", category: "Gaming PCs", price: 850000, img: "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600&q=80", desc: "AMD Threadripper. 128GB ECC Memory. Pure professional capability." },
+            { id: 3, name: "NVIDIA RTX 4090 FE", category: "Components", price: 620000, img: "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=600&q=80", desc: "Founder's Edition. Architectural perfection in metal and glass." },
+            { id: 4, name: "Corsair Dominator 64GB", category: "Components", price: 95000, img: "https://images.unsplash.com/photo-1624705578794-0f1e0023fcf6?w=600&q=80", desc: "DDR5-8000. For those who track every nanosecond of latency." },
+            { id: 5, name: "Intel Core i9-14900KS", category: "Components", price: 195000, img: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=600&q=80", desc: "The fastest silicon on the planet. Pre-binned for maximum frequency." },
+            { id: 6, name: "Minimalist Stealth Build", category: "Gaming PCs", price: 450000, img: "https://images.unsplash.com/photo-1624704712792-5eb5bc8ffea4?w=600&q=80", desc: "Zero RGB. Pure industrial design. Maximum performance, minimum noise." }
+        ];
+
+        let cart = [];
+
+        // --- 3D BACKGROUND (Three.js) ---
+        let scene, camera, renderer, stars;
+
+        function initThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 3000;
+            const positions = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 800;
+            }
+
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xC5A059, size: 0.7, transparent: true, opacity: 0.4 });
+            stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+
+            camera.position.z = 200;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            stars.rotation.y += 0.0003;
+            stars.rotation.x += 0.0001;
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Mouse interaction for background
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX - window.innerWidth / 2) / 100;
+            const y = (e.clientY - window.innerHeight / 2) / 100;
+            stars.position.x = x * 0.5;
+            stars.position.y = -y * 0.5;
+        });
+
+        // --- UI LOGIC ---
+        function renderProducts(filter = 'All') {
+            const grid = document.getElementById('product-grid');
+            const filtered = filter === 'All' ? products : products.filter(p => p.category === filter);
+            
+            grid.innerHTML = filtered.map((p, index) => `
+                <div class="card-container reveal active" style="transition-delay: ${index * 100}ms">
+                    <div class="premium-card p-6 flex flex-col h-full group cursor-pointer">
+                        <div class="relative overflow-hidden aspect-video bg-black/20 mb-8 rounded-sm">
+                            <img src="${p.img}" alt="${p.name}" class="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-[10px] tracking-[0.2em] text-premium-gold font-bold uppercase">${p.category}</span>
+                                <span class="text-zinc-500 text-[10px] uppercase">LTD EDITION</span>
+                            </div>
+                            <h3 class="font-serif text-2xl mb-3">${p.name}</h3>
+                            <p class="text-zinc-500 text-xs leading-relaxed mb-6">${p.desc}</p>
+                        </div>
+                        <div class="flex justify-between items-end pt-6 border-t border-white/5">
+                            <span class="font-serif text-xl">Rs ${p.price.toLocaleString()}</span>
+                            <button onclick="addToCart(${p.id})" class="text-[10px] tracking-widest uppercase border border-white/20 px-4 py-2 hover:bg-premium-gold hover:text-black transition-all">Acquire</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(cat) {
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active', 'border-premium-gold'));
+            event.target.classList.add('active', 'border-premium-gold');
+            renderProducts(cat);
+        }
+
+        function toggleCart() {
+            const sidebar = document.getElementById('cart-sidebar');
+            const overlay = document.getElementById('overlay');
+            const isOpen = sidebar.classList.contains('translate-x-0');
+            
+            if (isOpen) {
+                sidebar.classList.add('translate-x-full');
+                sidebar.classList.remove('translate-x-0');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 500);
+            } else {
+                renderCart();
+                sidebar.classList.remove('translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            }
+        }
+
+        function addToCart(id) {
+            const p = products.find(x => x.id === id);
+            cart.push(p);
+            updateCartCount();
+            
+            // Animation for cart count
+            const count = document.getElementById('cart-count');
+            count.classList.add('scale-150', 'bg-premium-gold');
+            setTimeout(() => count.classList.remove('scale-150', 'bg-premium-gold'), 300);
+        }
+
+        function updateCartCount() {
+            document.getElementById('cart-count').textContent = cart.length;
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            let total = 0;
+
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-zinc-600 text-xs uppercase tracking-widest mt-20 text-center">Trunk Empty.</div>`;
+            } else {
+                container.innerHTML = cart.map((item, index) => {
+                    total += item.price;
+                    return `
+                        <div class="flex gap-6 items-center">
+                            <div class="w-20 h-20 bg-white/5 border border-white/10 p-2">
+                                <img src="${item.img}" class="w-full h-full object-cover grayscale">
+                            </div>
+                            <div class="flex-grow">
+                                <h4 class="text-xs uppercase tracking-widest font-bold">${item.name}</h4>
+                                <div class="text-premium-gold text-sm font-serif mt-1">Rs ${item.price.toLocaleString()}</div>
+                            </div>
+                            <button onclick="removeFromCart(${index})" class="text-zinc-600 hover:text-white transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        </div>
+                    `;
+                }).join('');
+            }
+            totalEl.textContent = `Rs ${total.toLocaleString()}`;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartCount();
+            renderCart();
+        }
+
+        function checkout() {
+            if (cart.length === 0) return;
+            alert("Order Transmission Encrypted. Our agents will contact you for white-glove delivery.");
+            cart = [];
+            updateCartCount();
+            toggleCart();
+        }
+
+        function scrollToGrid() {
+            document.getElementById('collection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Scroll Navbar Reveal
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('bg-premium-obsidian/80', 'backdrop-blur-xl', 'py-4', 'border-b', 'border-white/5');
+                nav.classList.remove('py-6');
+            } else {
+                nav.classList.remove('bg-premium-obsidian/80', 'backdrop-blur-xl', 'py-4', 'border-b', 'border-white/5');
+                nav.classList.add('py-6');
+            }
+
+            // Simple Reveal Observer simulation
+            document.querySelectorAll('.reveal').forEach(el => {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < window.innerHeight - 100) {
+                    el.classList.add('active');
+                }
+            });
+        });
+
+        window.onload = () => {
+            initThree();
+            animate();
+            renderProducts();
+            
+            // Initial reveal
+            setTimeout(() => {
+                document.querySelectorAll('.reveal').forEach(el => el.classList.add('active'));
+            }, 100);
+        };
+    </script>
+</body>
+</html>
